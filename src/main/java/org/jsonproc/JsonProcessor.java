@@ -80,22 +80,20 @@ public class JsonProcessor extends AbstractProcessor {
     for (Element element : roundEnv.getRootElements()) {
       attributeClass(element);
       TreePathScanner<Void, Void> visitor = new TreePathScanner<Void, Void>() {
-        private com.sun.tools.javac.util.List statements;
+        private List statements;
         @Override
         public Void visitBlock(BlockTree node, Void aVoid) {
-          List statements = (List)node.getStatements();
-          if (statements != null) {
-            this.statements = statements;
-            try {
-              while (!this.statements.isEmpty()) {
-                Tree statement = (Tree)this.statements.get(0);
-                scan(statement, null);
-                this.statements = this.statements.tail;
-              }
+          List old = statements;
+          statements = (List)node.getStatements();
+          try {
+            while (statements != null && statements.size() > 0) {
+              Tree statement = (Tree)this.statements.get(0);
+              scan(statement, null);
+              statements = statements.tail;
             }
-            finally {
-              this.statements = null;
-            }
+          }
+          finally {
+            statements = old;
           }
           return null;
         }
