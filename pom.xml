@@ -56,14 +56,9 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-compiler-plugin</artifactId>
-          <executions>
-            <execution>
-              <id>default-compile</id>
-              <configuration>
-                <compilerArgument>-proc:none</compilerArgument>
-              </configuration>
-            </execution>
-          </executions>
+          <configuration>
+            <compilerArgument>-proc:none</compilerArgument>
+          </configuration>
         </plugin>
       </plugins>
     </pluginManagement>

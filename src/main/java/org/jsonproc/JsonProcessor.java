@@ -77,11 +77,6 @@ public class JsonProcessor extends AbstractProcessor {
 
   @Override
   public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
-    System.out.println("processing");
-    System.out.println("processing");
-    System.out.println("processing");
-    System.out.println("processing");
-    System.out.println("processing");
     for (Element element : roundEnv.getRootElements()) {
       attributeClass(element);
       TreePathScanner<Void, Void> visitor = new TreePathScanner<Void, Void>() {
