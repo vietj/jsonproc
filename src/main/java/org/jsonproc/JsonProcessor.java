@@ -4,6 +4,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.sun.source.tree.AssignmentTree;
 import com.sun.source.tree.BlockTree;
+import com.sun.source.tree.ClassTree;
 import com.sun.source.tree.Tree;
 import com.sun.source.util.TreePath;
 import com.sun.source.util.TreePathScanner;
@@ -27,6 +28,7 @@ import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeMirror;
+import java.util.LinkedList;
 import java.util.Set;
 
 /** @author Julien Viet */
@@ -80,14 +82,14 @@ public class JsonProcessor extends AbstractProcessor {
     for (Element element : roundEnv.getRootElements()) {
       attributeClass(element);
       TreePathScanner<Void, Void> visitor = new TreePathScanner<Void, Void>() {
-        private List statements;
+        private List<JCTree.JCStatement> statements;
         @Override
         public Void visitBlock(BlockTree node, Void aVoid) {
-          List old = statements;
-          statements = (List)node.getStatements();
+          List<JCTree.JCStatement> old = statements;
+          statements = (List<JCTree.JCStatement>)node.getStatements();
           try {
             while (statements != null && statements.size() > 0) {
-              Tree statement = (Tree)this.statements.get(0);
+              Tree statement = this.statements.get(0);
               scan(statement, null);
               statements = statements.tail;
             }
@@ -98,9 +100,28 @@ public class JsonProcessor extends AbstractProcessor {
           return null;
         }
 
+        private final LinkedList<Boolean> foo = new LinkedList<Boolean>();
+
+        @Override
+        public Void visitClass(ClassTree node, Void p) {
+          JCTree.JCClassDecl classDecl = (JCTree.JCClassDecl)node;
+          foo.addLast(isAssignable(classDecl.type, JSONObject_TYPE));
+          try {
+            return super.visitClass(node, p);
+          }
+          finally {
+            foo.removeLast();
+          }
+        }
+
+
+
         @Override
         public Void visitAssignment(AssignmentTree node, Void p) {
           super.visitAssignment(node, p);
+
+          JCTree.JCStatement repl = null;
+
           JCTree.JCExpression expr = (JCTree.JCExpression)node.getExpression();
           JCTree.JCExpression variable = (JCTree.JCExpression)node.getVariable();
           if (variable instanceof JCTree.JCFieldAccess) {
@@ -114,27 +135,33 @@ public class JsonProcessor extends AbstractProcessor {
                 JCTree.JCMethodInvocation mi = maker.Apply(
                     List.<JCTree.JCExpression>nil(),
                     access,
-                    List.of(maker.Literal(name), expr)
-                );
-                statements.head = maker.Exec(mi);
+                    List.of(maker.Literal(name), expr));
+                repl = maker.Exec(mi);
               } else if (isAssignable(exprType, JsonElement_TYPE)) {
                 access.name = (Name)processingEnv.getElementUtils().getName("add");
                 JCTree.JCMethodInvocation mi = maker.Apply(
                     List.<JCTree.JCExpression>nil(),
                     access,
-                    List.of(maker.Literal(name), expr)
-                );
-                statements.head = maker.Exec(mi);
+                    List.of(maker.Literal(name), expr));
+                repl = maker.Exec(mi);
               }
             } else if (isAssignable(selType, JSONObject_TYPE)) {
               access.name = (Name)processingEnv.getElementUtils().getName("put");
               JCTree.JCMethodInvocation mi = maker.Apply(
                   List.<JCTree.JCExpression>nil(),
                   access,
-                  List.of(maker.Literal(name), expr)
-              );
-              statements.head = maker.Exec(mi);
+                  List.of(maker.Literal(name), expr));
+              repl = maker.Exec(mi);
             }
+          } else if (foo.peekLast() && variable instanceof JCTree.JCIdent) {
+            JCTree.JCMethodInvocation mi = maker.Apply(
+                List.<JCTree.JCExpression>nil(),
+                maker.Ident((Name)processingEnv.getElementUtils().getName("put")),
+                List.of(maker.Literal(((JCTree.JCIdent)variable).name.toString()), expr));
+            repl = maker.Exec(mi);
+          }
+          if (repl != null) {
+            statements.head = repl;
           }
           return p;
         }

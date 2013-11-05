@@ -7,8 +7,9 @@ import java.util.concurrent.Callable;
 /** @author Julien Viet */
 public class Test implements Callable<JSONObject> {
   public JSONObject call() throws Exception {
-    JSONObject obj = new JSONObject() {
-    };
+    JSONObject obj = new JSONObject() {{
+      foo = "bar";
+    }};
     return obj;
   }
 }
