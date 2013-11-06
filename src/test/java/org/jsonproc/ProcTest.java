@@ -94,10 +94,6 @@ public class ProcTest {
     JSONObject obj = callable.call();
     Assert.assertEquals(Collections.singleton("foo"), obj.keySet());
     Assert.assertEquals("bar", obj.get("foo"));
-    // obj.foo = "bar";
-    // obj.juu = new JSONObject();
-    // obj.bar = new JSONObject();
-
   }
 
   @Test
@@ -108,9 +104,5 @@ public class ProcTest {
     JSONObject obj = callable.call();
     Assert.assertEquals(Collections.singleton("foo"), obj.keySet());
     Assert.assertEquals("bar", obj.get("foo"));
-    // obj.foo = "bar";
-    // obj.juu = new JSONObject();
-    // obj.bar = new JSONObject();
-
   }
 }
