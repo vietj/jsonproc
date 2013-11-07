@@ -122,8 +122,6 @@ public class JsonProcessor extends AbstractProcessor {
           variable.init = foo(variable.init);
           return p;
         }
-
-/*
         @Override
         public Void visitAssignment(AssignmentTree node, Void p) {
           p = super.visitAssignment(node, p);
@@ -131,8 +129,6 @@ public class JsonProcessor extends AbstractProcessor {
           assign.rhs = foo(assign.rhs);
           return p;
         }
-*/
-
         private JCTree.JCExpression foo(JCTree.JCExpression expr) {
           if (expr instanceof AssignmentTree) {
             AssignmentTree assignment = (AssignmentTree)expr;
