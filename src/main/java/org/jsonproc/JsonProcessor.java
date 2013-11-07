@@ -5,6 +5,8 @@ import com.google.gson.JsonObject;
 import com.sun.source.tree.AssignmentTree;
 import com.sun.source.tree.ClassTree;
 import com.sun.source.tree.ExpressionStatementTree;
+import com.sun.source.tree.MethodInvocationTree;
+import com.sun.source.tree.MethodTree;
 import com.sun.source.tree.ReturnTree;
 import com.sun.source.tree.VariableTree;
 import com.sun.source.util.TreePath;
@@ -127,6 +129,15 @@ public class JsonProcessor extends AbstractProcessor {
           p = super.visitAssignment(node, p);
           JCTree.JCAssign assign = (JCTree.JCAssign)node;
           assign.rhs = foo(assign.rhs);
+          return p;
+        }
+        @Override
+        public Void visitMethodInvocation(MethodInvocationTree node, Void p) {
+          p = super.visitMethodInvocation(node, p);
+          JCTree.JCMethodInvocation inv = (JCTree.JCMethodInvocation)node;
+          for (List<JCTree.JCExpression> current = inv.args;current != null;current = current.tail) {
+            current.head = foo(current.head);
+          }
           return p;
         }
         private JCTree.JCExpression foo(JCTree.JCExpression expr) {
