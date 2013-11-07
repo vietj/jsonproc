@@ -88,7 +88,7 @@ public class ProcTest {
 
   @Test
   public void testAssignVariableInExpressionStatement() throws Exception {
-    String[] tests = {"ExpressionStatement","Return"};
+    String[] tests = {"ExpressionStatement","Return","VariableDecl"};
     for (String test : tests) {
       ClassLoader loader = assertCompile("/test01/" + test + "Test.java");
       Class<?> clazz = loader.loadClass("test01." + test + "Test");

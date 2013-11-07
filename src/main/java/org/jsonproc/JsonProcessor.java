@@ -6,6 +6,7 @@ import com.sun.source.tree.AssignmentTree;
 import com.sun.source.tree.ClassTree;
 import com.sun.source.tree.ExpressionStatementTree;
 import com.sun.source.tree.ReturnTree;
+import com.sun.source.tree.VariableTree;
 import com.sun.source.util.TreePath;
 import com.sun.source.util.TreePathScanner;
 import com.sun.source.util.Trees;
@@ -113,6 +114,25 @@ public class JsonProcessor extends AbstractProcessor {
           ret.expr = foo(ret.expr);
           return p;
         }
+
+        @Override
+        public Void visitVariable(VariableTree node, Void p) {
+          p = super.visitVariable(node, p);
+          JCTree.JCVariableDecl variable = (JCTree.JCVariableDecl)node;
+          variable.init = foo(variable.init);
+          return p;
+        }
+
+/*
+        @Override
+        public Void visitAssignment(AssignmentTree node, Void p) {
+          p = super.visitAssignment(node, p);
+          JCTree.JCAssign assign = (JCTree.JCAssign)node;
+          assign.rhs = foo(assign.rhs);
+          return p;
+        }
+*/
+
         private JCTree.JCExpression foo(JCTree.JCExpression expr) {
           if (expr instanceof AssignmentTree) {
             AssignmentTree assignment = (AssignmentTree)expr;
