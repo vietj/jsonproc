@@ -5,6 +5,7 @@ import com.google.gson.JsonObject;
 import com.sun.source.tree.AssignmentTree;
 import com.sun.source.tree.ClassTree;
 import com.sun.source.tree.ExpressionStatementTree;
+import com.sun.source.tree.ReturnTree;
 import com.sun.source.util.TreePath;
 import com.sun.source.util.TreePathScanner;
 import com.sun.source.util.Trees;
@@ -30,7 +31,12 @@ import javax.lang.model.type.TypeMirror;
 import java.util.LinkedList;
 import java.util.Set;
 
-/** @author Julien Viet */
+/**
+ * todo:
+ * JSONObject.put has type Object and not the type of the value inserted
+ *
+ * @author Julien Viet
+ */
 @SupportedAnnotationTypes("*")
 public class JsonProcessor extends AbstractProcessor {
 
@@ -95,12 +101,19 @@ public class JsonProcessor extends AbstractProcessor {
         }
         @Override
         public Void visitExpressionStatement(ExpressionStatementTree node, Void p) {
-          Void ret = super.visitExpressionStatement(node, p);
+          p = super.visitExpressionStatement(node, p);
           JCTree.JCExpressionStatement exec = (JCTree.JCExpressionStatement)node;
           exec.expr = foo(exec.expr);
-          return ret;
+          return p;
         }
-        JCTree.JCExpression foo(JCTree.JCExpression expr) {
+        @Override
+        public Void visitReturn(ReturnTree node, Void p) {
+          p = super.visitReturn(node, p);
+          JCTree.JCReturn ret = (JCTree.JCReturn)node;
+          ret.expr = foo(ret.expr);
+          return p;
+        }
+        private JCTree.JCExpression foo(JCTree.JCExpression expr) {
           if (expr instanceof AssignmentTree) {
             AssignmentTree assignment = (AssignmentTree)expr;
             JCTree.JCExpression assignmentExpr = (JCTree.JCExpression)assignment.getExpression();

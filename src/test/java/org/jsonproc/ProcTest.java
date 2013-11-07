@@ -87,13 +87,16 @@ public class ProcTest {
   }
 
   @Test
-  public void testAssignVariable() throws Exception {
-    ClassLoader loader = assertCompile("/test01/Test.java");
-    Class<?> clazz = loader.loadClass("test01.Test");
-    Callable<JSONObject> callable = (Callable<JSONObject>)clazz.newInstance();
-    JSONObject obj = callable.call();
-    Assert.assertEquals(Collections.singleton("foo"), obj.keySet());
-    Assert.assertEquals("bar", obj.get("foo"));
+  public void testAssignVariableInExpressionStatement() throws Exception {
+    String[] tests = {"ExpressionStatement","Return"};
+    for (String test : tests) {
+      ClassLoader loader = assertCompile("/test01/" + test + "Test.java");
+      Class<?> clazz = loader.loadClass("test01." + test + "Test");
+      Callable<JSONObject> callable = (Callable<JSONObject>)clazz.newInstance();
+      JSONObject obj = callable.call();
+      Assert.assertEquals(Collections.singleton("foo"), obj.keySet());
+      Assert.assertEquals("bar", obj.get("foo"));
+    }
   }
 
   @Test
