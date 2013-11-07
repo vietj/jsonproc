@@ -3,9 +3,8 @@ package org.jsonproc;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.sun.source.tree.AssignmentTree;
-import com.sun.source.tree.BlockTree;
 import com.sun.source.tree.ClassTree;
-import com.sun.source.tree.Tree;
+import com.sun.source.tree.ExpressionStatementTree;
 import com.sun.source.util.TreePath;
 import com.sun.source.util.TreePathScanner;
 import com.sun.source.util.Trees;
@@ -82,88 +81,64 @@ public class JsonProcessor extends AbstractProcessor {
     for (Element element : roundEnv.getRootElements()) {
       attributeClass(element);
       TreePathScanner<Void, Void> visitor = new TreePathScanner<Void, Void>() {
-        private List<JCTree.JCStatement> statements;
-        @Override
-        public Void visitBlock(BlockTree node, Void aVoid) {
-          List<JCTree.JCStatement> old = statements;
-          statements = (List<JCTree.JCStatement>)node.getStatements();
-          try {
-            while (statements != null && statements.size() > 0) {
-              Tree statement = this.statements.get(0);
-              scan(statement, null);
-              statements = statements.tail;
-            }
-          }
-          finally {
-            statements = old;
-          }
-          return null;
-        }
-
-        private final LinkedList<Boolean> foo = new LinkedList<Boolean>();
-
+        private final LinkedList<Boolean> inJSONClass = new LinkedList<Boolean>();
         @Override
         public Void visitClass(ClassTree node, Void p) {
           JCTree.JCClassDecl classDecl = (JCTree.JCClassDecl)node;
-          foo.addLast(isAssignable(classDecl.type, JSONObject_TYPE));
+          inJSONClass.addLast(isAssignable(classDecl.type, JSONObject_TYPE));
           try {
             return super.visitClass(node, p);
           }
           finally {
-            foo.removeLast();
+            inJSONClass.removeLast();
           }
         }
-
-
-
         @Override
-        public Void visitAssignment(AssignmentTree node, Void p) {
-          super.visitAssignment(node, p);
-
-          JCTree.JCStatement repl = null;
-
-          JCTree.JCExpression expr = (JCTree.JCExpression)node.getExpression();
-          JCTree.JCExpression variable = (JCTree.JCExpression)node.getVariable();
-          if (variable instanceof JCTree.JCFieldAccess) {
-            JCTree.JCFieldAccess access = (JCTree.JCFieldAccess)variable;
-            String name = access.name.toString();
-            Type exprType = expr.type;
-            Type selType = access.selected.type;
-            if (isAssignable(selType, JsonObject_TYPE)) {
-              if (isAssignable(exprType, STRING_TYPE)) {
-                access.name = (Name)processingEnv.getElementUtils().getName("addProperty");
-                JCTree.JCMethodInvocation mi = maker.Apply(
+        public Void visitExpressionStatement(ExpressionStatementTree node, Void p) {
+          Void ret = super.visitExpressionStatement(node, p);
+          JCTree.JCExpressionStatement exec = (JCTree.JCExpressionStatement)node;
+          exec.expr = foo(exec.expr);
+          return ret;
+        }
+        JCTree.JCExpression foo(JCTree.JCExpression expr) {
+          if (expr instanceof AssignmentTree) {
+            AssignmentTree assignment = (AssignmentTree)expr;
+            JCTree.JCExpression assignmentExpr = (JCTree.JCExpression)assignment.getExpression();
+            JCTree.JCExpression assignmentVar = (JCTree.JCExpression)assignment.getVariable();
+            if (assignmentVar instanceof JCTree.JCFieldAccess) {
+              JCTree.JCFieldAccess access = (JCTree.JCFieldAccess)assignmentVar;
+              String name = access.name.toString();
+              Type type = assignmentExpr.type;
+              Type selType = access.selected.type;
+              if (isAssignable(selType, JsonObject_TYPE)) {
+                if (isAssignable(type, STRING_TYPE)) {
+                  access.name = (Name)processingEnv.getElementUtils().getName("addProperty");
+                  return maker.Apply(
+                      List.<JCTree.JCExpression>nil(),
+                      access,
+                      List.of(maker.Literal(name), assignmentExpr));
+                } else if (isAssignable(type, JsonElement_TYPE)) {
+                  access.name = (Name)processingEnv.getElementUtils().getName("add");
+                  return maker.Apply(
+                      List.<JCTree.JCExpression>nil(),
+                      access,
+                      List.of(maker.Literal(name), assignmentExpr));
+                }
+              } else if (isAssignable(selType, JSONObject_TYPE)) {
+                access.name = (Name)processingEnv.getElementUtils().getName("put");
+                return maker.Apply(
                     List.<JCTree.JCExpression>nil(),
                     access,
-                    List.of(maker.Literal(name), expr));
-                repl = maker.Exec(mi);
-              } else if (isAssignable(exprType, JsonElement_TYPE)) {
-                access.name = (Name)processingEnv.getElementUtils().getName("add");
-                JCTree.JCMethodInvocation mi = maker.Apply(
-                    List.<JCTree.JCExpression>nil(),
-                    access,
-                    List.of(maker.Literal(name), expr));
-                repl = maker.Exec(mi);
+                    List.of(maker.Literal(name), assignmentExpr));
               }
-            } else if (isAssignable(selType, JSONObject_TYPE)) {
-              access.name = (Name)processingEnv.getElementUtils().getName("put");
-              JCTree.JCMethodInvocation mi = maker.Apply(
+            } else if (inJSONClass.peekLast() && assignmentVar instanceof JCTree.JCIdent) {
+              return maker.Apply(
                   List.<JCTree.JCExpression>nil(),
-                  access,
-                  List.of(maker.Literal(name), expr));
-              repl = maker.Exec(mi);
+                  maker.Ident((Name)processingEnv.getElementUtils().getName("put")),
+                  List.of(maker.Literal(((JCTree.JCIdent)assignmentVar).name.toString()), assignmentExpr));
             }
-          } else if (foo.peekLast() && variable instanceof JCTree.JCIdent) {
-            JCTree.JCMethodInvocation mi = maker.Apply(
-                List.<JCTree.JCExpression>nil(),
-                maker.Ident((Name)processingEnv.getElementUtils().getName("put")),
-                List.of(maker.Literal(((JCTree.JCIdent)variable).name.toString()), expr));
-            repl = maker.Exec(mi);
           }
-          if (repl != null) {
-            statements.head = repl;
-          }
-          return p;
+          return expr;
         }
       };
       TreePath path = trees.getPath(element);
